@@ -1,0 +1,104 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Tenant {
+  id        String   @id @default(uuid())
+  name      String
+  createdAt DateTime @default(now())
+
+  users           User[]
+  products        Product[]
+  customers       Customer[]
+  orders          Order[]
+  cashierSessions CashierSession[]
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  role         String
+  tenantId     String
+  createdAt    DateTime @default(now())
+
+  tenant          Tenant           @relation(fields: [tenantId], references: [id])
+  openedSessions  CashierSession[]
+  orders          Order[]
+}
+
+model Product {
+  id        String   @id @default(uuid())
+  tenantId  String
+  name      String
+  sku       String
+  barcode   String
+  price     Decimal
+  stock     Int
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant     Tenant      @relation(fields: [tenantId], references: [id])
+  orderItems OrderItem[]
+}
+
+model Customer {
+  id        String   @id @default(uuid())
+  tenantId  String
+  name      String
+  cpf       String
+  phone     String
+  createdAt DateTime @default(now())
+
+  tenant Tenant  @relation(fields: [tenantId], references: [id])
+  orders Order[]
+}
+
+model Order {
+  id            String        @id @default(uuid())
+  tenantId      String
+  customerId    String?
+  status        String
+  subtotal      Decimal
+  discount      Decimal
+  freight       Decimal
+  total         Decimal
+  paymentMethod String
+  createdAt     DateTime      @default(now())
+
+  tenant     Tenant      @relation(fields: [tenantId], references: [id])
+  customer   Customer?   @relation(fields: [customerId], references: [id])
+  user       User?       @relation(fields: [userId], references: [id])
+  userId     String?
+  orderItems OrderItem[]
+}
+
+model OrderItem {
+  id        String  @id @default(uuid())
+  orderId   String
+  productId String
+  qty       Int
+  unitPrice Decimal
+  total     Decimal
+
+  order   Order   @relation(fields: [orderId], references: [id])
+  product Product @relation(fields: [productId], references: [id])
+}
+
+model CashierSession {
+  id             String        @id @default(uuid())
+  tenantId       String
+  openedByUserId String
+  openedAt       DateTime      @default(now())
+  closedAt       DateTime?
+  status         String
+
+  tenant       Tenant @relation(fields: [tenantId], references: [id])
+  openedByUser User   @relation(fields: [openedByUserId], references: [id])
+}
